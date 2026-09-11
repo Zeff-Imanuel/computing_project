@@ -1,0 +1,13 @@
+{
+	"require": {
+		"nesbot/carbon": "^3.13",
+		"fakerphp/faker": "^1.24",
+		"phpmailer/phpmailer": "^7.1"
+	},
+	"autoload": {
+		"psr-4": {
+			"Helpers\\": "classes/Helpers",
+			"Libs\\": "classes/Libs"
+		}
+	}
+}
