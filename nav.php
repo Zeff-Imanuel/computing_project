@@ -8,6 +8,21 @@ $is_logged_in = isset($_SESSION['user']);
 $user = $_SESSION['user'] ?? null;
 
 $current_page = basename($_SERVER['PHP_SELF']);
+
+// ===== Decide appointments link by role =====
+$appointments_link = 'user-appointments.php';
+$appointments_active_pages = ['user-appointments.php'];
+
+if ($is_logged_in) {
+    if ($user->role_id == 2) {
+        $appointments_link = 'agent-properties.php';
+        $appointments_active_pages = ['agent-properties.php', 'agent-appointments.php'];
+    } elseif ($user->role_id == 3) {
+        $appointments_link = 'admin-appointments.php';
+        $appointments_active_pages = ['admin-appointments.php'];
+    }
+}
+$appointments_is_active = in_array($current_page, $appointments_active_pages);
 ?>
 
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
@@ -51,7 +66,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="user-appointments.php" class="nav-link <?= $current_page == 'user-appointments.php' ? 'active fw-bold' : '' ?>">
+                    <a href="<?= $appointments_link ?>" class="nav-link <?= $appointments_is_active ? 'active fw-bold' : '' ?>">
                         Appointments
                     </a>
                 </li>
@@ -82,14 +97,9 @@ $current_page = basename($_SERVER['PHP_SELF']);
                     </a>
 
                     <?php if ($user->role_id == 3): ?>
-                        <!-- Admin -->
+                        <!-- Admin only -->
                         <a href="admin.php" class="btn btn-primary btn-sm rounded-pill px-3 ms-2">
                             Admin
-                        </a>
-                    <?php elseif ($user->role_id == 2): ?>
-                        <!-- Agent -->
-                        <a href="agent-appointments.php" class="btn btn-primary btn-sm rounded-pill px-3 ms-2">
-                            Agent Panel
                         </a>
                     <?php endif; ?>
 

@@ -7,7 +7,6 @@ use Helpers\HTTP;
 use Libs\Database\MySQL;
 use Libs\Database\PropertiesTable;
 
-// Must be logged in
 $user = Auth::check();
 
 $property_id = $_GET['property_id'] ?? 0;
@@ -56,15 +55,9 @@ $is_logged_in = true;
             text-align: center;
             color: white;
         }
-        .page-header h1 {
-            font-size: 2.5rem;
-            font-weight: 800;
-        }
+        .page-header h1 { font-size: 2.5rem; font-weight: 800; }
         .page-header h1 span { color: var(--accent); }
-        .page-header p {
-            color: rgba(255,255,255,0.7);
-            font-size: 1.1rem;
-        }
+        .page-header p { color: rgba(255,255,255,0.7); font-size: 1.1rem; }
 
         .booking-container {
             background: white;
@@ -103,14 +96,8 @@ $is_logged_in = true;
             color: var(--gray);
             font-size: 2rem;
         }
-        .property-preview .info h5 {
-            font-weight: 700;
-            margin-bottom: 5px;
-        }
-        .property-preview .info .location {
-            color: var(--gray);
-            font-size: 0.9rem;
-        }
+        .property-preview .info h5 { font-weight: 700; margin-bottom: 5px; }
+        .property-preview .info .location { color: var(--gray); font-size: 0.9rem; }
         .property-preview .info .price {
             color: var(--primary);
             font-weight: 700;
@@ -118,10 +105,7 @@ $is_logged_in = true;
             margin-top: 5px;
         }
 
-        .form-label {
-            font-weight: 600;
-            color: var(--secondary);
-        }
+        .form-label { font-weight: 600; color: var(--secondary); }
         .form-control, .form-select {
             border: 2px solid var(--border-color);
             border-radius: 8px;
@@ -178,10 +162,7 @@ $is_logged_in = true;
             border-radius: 8px;
             margin-bottom: 25px;
         }
-        .info-box i {
-            color: var(--primary);
-            margin-right: 8px;
-        }
+        .info-box i { color: var(--primary); margin-right: 8px; }
 
         .toast-container {
             position: fixed;
@@ -263,7 +244,7 @@ $is_logged_in = true;
             <!-- Property Preview -->
             <div class="property-preview">
                 <?php if ($property->photo): ?>
-                    <img src="/project/images/<?= $property->photo ?>" alt="<?= $property->title ?>">
+                    <img src="images/<?= $property->photo ?>" alt="<?= $property->title ?>">
                 <?php else: ?>
                     <div class="no-image"><i class="fas fa-home"></i></div>
                 <?php endif; ?>
@@ -389,7 +370,8 @@ $is_logged_in = true;
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Booking...';
 
-            fetch('/project/actions/appointments-create.php', {
+            // ✅ FIXED: relative path (no leading slash)
+            fetch('actions/appointments-create.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -408,7 +390,7 @@ $is_logged_in = true;
                 if (data.success) {
                     showToast('Appointment booked successfully! 🎉', 'success');
                     setTimeout(() => {
-                        window.location.href = 'user-appointments.php';  // ✅ FIXED
+                        window.location.href = 'user-appointments.php';
                     }, 1500);
                 } else {
                     showToast(data.message || 'Something went wrong', 'error');
@@ -419,6 +401,7 @@ $is_logged_in = true;
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-calendar-check"></i> Book Appointment';
                 showToast('Network error. Please try again.', 'error');
+                console.error('Booking error:', error);
             });
         });
     </script>

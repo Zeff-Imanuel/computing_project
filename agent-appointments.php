@@ -5,101 +5,99 @@ include("vendor/autoload.php");
 use Helpers\Auth;
 use Helpers\HTTP;
 use Libs\Database\MySQL;
+use Libs\Database\PropertiesTable;
 use Libs\Database\AppointmentsTable;
 
 $auth = Auth::check();
 
-// Only agents (2) and admins (3) can access
 if ($auth->role_id < 2) {
     HTTP::redirect("/index.php", "error=unauthorized");
 }
 
+$properties_table   = new PropertiesTable(new MySQL);
 $appointments_table = new AppointmentsTable(new MySQL);
-$appointments = $appointments_table->getByAgent($auth->id);
 
-// Calculate stats
-$total = count($appointments);
-$pending = 0;
-$confirmed = 0;
-$completed = 0;
-$cancelled = 0;
+$all_properties = $properties_table->all();
 
-foreach ($appointments as $apt) {
-    switch ($apt->status) {
-        case 'pending': $pending++; break;
-        case 'confirmed': $confirmed++; break;
-        case 'completed': $completed++; break;
-        case 'cancelled': $cancelled++; break;
+// Filter only this agent's properties
+$properties = [];
+foreach ($all_properties as $prop) {
+    if ($prop->user_id == $auth->id) {
+        $properties[] = $prop;
     }
 }
 
-$is_admin = ($auth->role_id == 3);
+// ===== Stats (agent's own properties) =====
+$total = count($properties);
+$available = 0;
+$pending = 0;
+$sold = 0;
+$rented = 0;
+
+foreach ($properties as $p) {
+    switch ($p->status) {
+        case 'available': $available++; break;
+        case 'pending':   $pending++;   break;
+        case 'sold':      $sold++;      break;
+        case 'rented':    $rented++;    break;
+    }
+}
+
+// ===== Appointments for this agent =====
+$appointments = $appointments_table->getByAgent($auth->id);
+
+$appt_pending   = 0;
+$appt_confirmed = 0;
+$appt_completed = 0;
+$appt_cancelled = 0;
+
+foreach ($appointments as $a) {
+    switch ($a->status) {
+        case 'pending':   $appt_pending++;   break;
+        case 'confirmed': $appt_confirmed++; break;
+        case 'completed': $appt_completed++; break;
+        case 'cancelled': $appt_cancelled++; break;
+    }
+}
+
+$is_logged_in = true;
+$user = $auth;
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agent Appointments - KKG Property</title>
+    <title>My Properties - Agent Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #2563eb;
+            --primary: #1a56db;
+            --primary-dark: #1e40af;
             --secondary: #0f172a;
             --accent: #f59e0b;
             --gray: #64748b;
             --light-gray: #f1f5f9;
+            --border-color: #e2e8f0;
             --shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 25px -3px rgba(0,0,0,0.15);
             --radius: 12px;
         }
         * { font-family: 'Inter', sans-serif; }
-        body { background: #f1f5f9; }
+        body { background: #f8fafc; }
 
-        /* ===== NAVBAR ===== */
-        .navbar-custom {
-            background: white;
-            padding: 12px 0;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            border-bottom: 1px solid #e9ecef;
-        }
-        .navbar-custom .brand {
-            font-size: 1.3rem;
-            font-weight: 800;
-            color: var(--primary);
-            text-decoration: none;
-        }
-        .navbar-custom .brand i { color: var(--accent); }
-        .navbar-custom .nav-link {
-            color: #000307;
-            font-weight: 500;
-            padding: 8px 14px;
-            border-radius: 6px;
-            transition: 0.2s;
-            font-size: 0.9rem;
-        }
-        .navbar-custom .nav-link:hover {
-            color: var(--primary);
-            background: #f1f5ff;
-        }
-        .navbar-custom .nav-link.active {
-            color: var(--primary);
-            background: #f1f5ff;
-            font-weight: 700;
-        }
-
-        .user-badge {
-            background: var(--primary);
+        .page-header {
+            background: var(--secondary);
+            padding: 50px 0 40px;
+            text-align: center;
             color: white;
-            padding: 5px 14px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
         }
+        .page-header h1 { font-size: 2.5rem; font-weight: 800; }
+        .page-header h1 span { color: var(--accent); }
+        .page-header p { color: rgba(255,255,255,0.7); }
 
-        /* ===== STATS ===== */
         .stat-card {
             background: white;
             padding: 20px 25px;
@@ -111,103 +109,170 @@ $is_admin = ($auth->role_id == 3);
         .stat-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
         .stat-card .number { font-size: 2rem; font-weight: 700; color: var(--secondary); }
         .stat-card .label { color: var(--gray); font-size: 0.85rem; }
-        .stat-card.blue { border-color: var(--primary); }
-        .stat-card.orange { border-color: var(--accent); }
         .stat-card.green { border-color: #22c55e; }
+        .stat-card.orange { border-color: var(--accent); }
+        .stat-card.red { border-color: #ef4444; }
         .stat-card.teal { border-color: #06b6d4; }
 
-        /* ===== BUTTONS ===== */
         .btn-primary-custom {
             background: var(--primary);
             color: white;
-            border: none;
             padding: 8px 20px;
             border-radius: 8px;
             font-weight: 600;
-            transition: all 0.3s;
             text-decoration: none;
-            display: inline-block;
-            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            border: none;
+            transition: all 0.3s;
         }
         .btn-primary-custom:hover {
-            background: #1d4ed8;
+            background: var(--primary-dark);
+            color: white;
             transform: scale(1.02);
-            color: white;
         }
-        .btn-outline-custom {
-            background: transparent;
-            color: var(--primary);
-            border: 2px solid var(--primary);
-            padding: 8px 20px;
-            border-radius: 8px;
+        .btn-warning-custom {
+            background: var(--accent);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
             font-weight: 600;
-            transition: all 0.3s;
+            font-size: 0.8rem;
             text-decoration: none;
-            display: inline-block;
-            font-size: 0.9rem;
+            border: none;
         }
-        .btn-outline-custom:hover {
-            background: var(--primary);
-            color: white;
-        }
+        .btn-warning-custom:hover { background: #d97706; color: white; }
 
-        /* ===== TABLE ===== */
         .table-container {
             background: white;
             border-radius: var(--radius);
             padding: 20px;
             box-shadow: var(--shadow);
+            margin-bottom: 30px;
         }
-
-        .property-thumb {
-            width: 60px;
-            height: 50px;
-            object-fit: cover;
-            border-radius: 6px;
+        .table thead th {
             background: var(--light-gray);
+            font-weight: 700;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: var(--gray);
         }
-
         .badge-status {
-            padding: 6px 14px;
+            padding: 4px 12px;
             border-radius: 20px;
             font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .badge-status.available { background: #dcfce7; color: #166534; }
+        .badge-status.pending   { background: #fef3c7; color: #92400e; }
+        .badge-status.sold      { background: #fee2e2; color: #991b1b; }
+        .badge-status.rented    { background: #cffafe; color: #155e75; }
+
+        /* ===== APPOINTMENT SECTION ===== */
+        .appointments-section { margin-top: 30px; }
+        .appointment-card {
+            background: white;
+            border-radius: var(--radius);
+            padding: 18px 20px;
+            box-shadow: var(--shadow);
+            border-left: 4px solid var(--primary);
+            margin-bottom: 15px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            transition: all 0.3s;
+        }
+        .appointment-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+        .appointment-card.pending   { border-left-color: #f59e0b; }
+        .appointment-card.confirmed { border-left-color: #22c55e; }
+        .appointment-card.completed { border-left-color: #06b6d4; }
+        .appointment-card.cancelled { border-left-color: #ef4444; opacity: 0.7; }
+
+        .appointment-card img {
+            width: 110px;
+            height: 90px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+        .appointment-card .no-image {
+            width: 110px;
+            height: 90px;
+            background: var(--light-gray);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--gray);
+            font-size: 1.5rem;
+        }
+        .appointment-card .info { flex: 1; }
+        .appointment-card .info .title {
+            font-weight: 700;
+            font-size: 1.05rem;
+            margin-bottom: 4px;
+        }
+        .appointment-card .info .location {
+            color: var(--gray);
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+        }
+        .appointment-card .info .datetime {
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 6px;
+        }
+        .appointment-card .info .user {
+            font-size: 0.85rem;
+            color: var(--secondary);
+            margin-bottom: 4px;
+        }
+        .appointment-card .info .message {
+            color: var(--gray);
+            font-size: 0.82rem;
+            font-style: italic;
+            margin-top: 6px;
+        }
+
+        .badge-apt-status {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.72rem;
             font-weight: 700;
             text-transform: uppercase;
         }
-        .badge-status.pending { background: #fef3c7; color: #92400e; }
-        .badge-status.confirmed { background: #dcfce7; color: #166534; }
-        .badge-status.completed { background: #cffafe; color: #155e75; }
-        .badge-status.cancelled { background: #fee2e2; color: #991b1b; }
-
-        .row-highlight { animation: highlightRow 1s ease; }
-        @keyframes highlightRow {
-            0% { background-color: rgba(34, 197, 94, 0.3); }
-            100% { background-color: transparent; }
-        }
-        .row-highlight-delete { animation: highlightDelete 0.6s ease forwards; }
-        @keyframes highlightDelete {
-            0% { background-color: rgba(239, 68, 68, 0.3); }
-            100% { opacity: 0; transform: scale(0.95); height: 0; padding: 0; overflow: hidden; }
-        }
+        .badge-apt-status.pending   { background: #fef3c7; color: #92400e; }
+        .badge-apt-status.confirmed { background: #dcfce7; color: #166534; }
+        .badge-apt-status.completed { background: #cffafe; color: #155e75; }
+        .badge-apt-status.cancelled { background: #fee2e2; color: #991b1b; }
 
         .btn-action {
-            position: relative;
-            overflow: hidden;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.78rem;
+            border: none;
+            cursor: pointer;
             transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 6px;
         }
-        .btn-action:active { transform: scale(0.92); }
+        .btn-action:hover { transform: scale(1.05); }
+        .btn-confirm  { background: #22c55e; color: white; }
+        .btn-complete { background: #06b6d4; color: white; }
+        .btn-cancel   { background: #ef4444; color: white; }
+        .btn-action:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        /* ===== TOAST ===== */
         .toast-container {
             position: fixed;
             top: 20px;
             right: 20px;
             z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
             max-width: 400px;
-            width: 100%;
         }
         .toast-message {
             padding: 16px 24px;
@@ -215,390 +280,394 @@ $is_admin = ($auth->role_id == 3);
             color: white;
             font-weight: 600;
             box-shadow: var(--shadow-lg);
-            transform: translateX(120%);
-            transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
             display: flex;
             align-items: center;
             gap: 12px;
+            min-width: 280px;
+            margin-bottom: 10px;
+            animation: slideIn 0.4s ease;
         }
-        .toast-message.show { transform: translateX(0); }
+        @keyframes slideIn {
+            from { transform: translateX(120%); }
+            to   { transform: translateX(0); }
+        }
         .toast-message.success { background: #22c55e; }
-        .toast-message.error { background: #ef4444; }
-        .toast-message.info { background: var(--primary); }
+        .toast-message.error   { background: #ef4444; }
 
-        /* ===== LOADING ===== */
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.4);
-            backdrop-filter: blur(4px);
-            z-index: 9997;
-            display: none;
-            justify-content: center;
-            align-items: center;
-        }
-        .loading-overlay.show { display: flex; }
-        .loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 4px solid rgba(255,255,255,0.2);
-            border-top-color: white;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* ===== CONFETTI ===== */
-        .confetti-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 9998;
-            overflow: hidden;
-        }
-        .confetti {
-            position: absolute;
-            width: 8px;
-            height: 8px;
-            border-radius: 2px;
-            animation: confettiFall linear forwards;
-        }
-        @keyframes confettiFall {
-            0% { transform: translateY(-20px) rotate(0deg) scale(1); opacity: 1; }
-            100% { transform: translateY(100vh) rotate(720deg) scale(0.5); opacity: 0; }
+        .footer {
+            background: #0f172a;
+            color: rgba(255,255,255,0.7);
+            padding: 30px 0 20px;
+            margin-top: 40px;
+            text-align: center;
+            font-size: 0.9rem;
         }
 
-        @media (max-width: 992px) {
-            .navbar-custom .nav-link {
-                padding: 10px 14px;
-                margin: 2px 0;
-            }
-            .navbar-custom .btn {
-                width: 100%;
-                text-align: center;
-                margin: 4px 0 !important;
-            }
+        @media (max-width: 768px) {
+            .page-header h1 { font-size: 1.8rem; }
+            .appointment-card { flex-direction: column; text-align: center; }
         }
     </style>
 </head>
 <body>
 
+    <?php include("nav.php"); ?>
+
     <div id="toastContainer" class="toast-container"></div>
-    <div id="loadingOverlay" class="loading-overlay">
-        <div class="loading-spinner"></div>
-    </div>
 
-    <!-- ===== NAVBAR ===== -->
-    <nav class="navbar navbar-expand-lg navbar-custom">
+    <section class="page-header">
         <div class="container">
-            <a class="brand" href="home.php">
-                <i class="fas fa-home"></i> KKG Property
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="nav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a href="home.php" class="nav-link">
-                            <i class="fas fa-home"></i> Home
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="sale.php" class="nav-link">
-                            For Sale
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="rent.php" class="nav-link">
-                            For Rent
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="new-properties.php" class="nav-link">
-                            New Properties
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="agent-appointments.php" class="nav-link active">
-                            <i class="fas fa-calendar"></i> Appointments
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="about.php" class="nav-link">
-                            About Us
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="contact.php" class="nav-link">
-                            Contact
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="add-property.php" class="nav-link">
-                            <i class="fas fa-plus-circle"></i> Add Property
-                        </a>
-                    </li>
-                </ul>
-
-                <div class="d-flex align-items-center ms-3">
-                    <a href="profile.php" class="btn btn-outline-primary btn-sm rounded-pill px-3">
-                        <?= htmlspecialchars($auth->name) ?>
-                    </a>
-                    <?php if ($is_admin): ?>
-                        <a href="admin.php" class="btn btn-primary btn-sm rounded-pill px-3 ms-2">
-                            Admin
-                        </a>
-                    <?php endif; ?>
-                    <a href="actions/logout.php" class="btn btn-outline-danger btn-sm rounded-pill px-3 ms-2">
-                        Logout
-                    </a>
-                </div>
-
-            </div>
+            <h1>My <span>Properties</span></h1>
+            <p>Manage your listings and appointments</p>
         </div>
-    </nav>
+    </section>
 
-    <!-- ===== MAIN CONTENT ===== -->
-    <div class="container mt-4">
+    <section class="container mt-4">
 
-        <!-- Header -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h4 class="fw-bold mb-0">
-                    <i class="fas fa-calendar-check text-primary"></i> Agent Appointments
-                </h4>
-                <small class="text-muted">Manage appointments for your properties</small>
-            </div>
-            <a href="add-property.php" class="btn btn-primary-custom">
-                <i class="fas fa-plus"></i> Add Property
-            </a>
-        </div>
-
-        <!-- Stats -->
-        <div class="row g-3 mb-4">
-            <div class="col-md-3">
-                <div class="stat-card blue">
+        <!-- ===== STAT CARDS ===== -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-3 col-6">
+                <div class="stat-card">
                     <div class="number"><?= $total ?></div>
-                    <div class="label"><i class="fas fa-calendar"></i> Total</div>
+                    <div class="label"><i class="fas fa-home"></i> Total Listings</div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="stat-card orange">
-                    <div class="number"><?= $pending ?></div>
-                    <div class="label"><i class="fas fa-clock"></i> Pending</div>
-                </div>
-            </div>
-            <div class="col-md-3">
+            <div class="col-md-3 col-6">
                 <div class="stat-card green">
-                    <div class="number"><?= $confirmed ?></div>
-                    <div class="label"><i class="fas fa-check-circle"></i> Confirmed</div>
+                    <div class="number"><?= $available ?></div>
+                    <div class="label"><i class="fas fa-check-circle"></i> Available</div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-3 col-6">
+                <div class="stat-card red">
+                    <div class="number"><?= $sold ?></div>
+                    <div class="label"><i class="fas fa-handshake"></i> Sold</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
                 <div class="stat-card teal">
-                    <div class="number"><?= $completed ?></div>
-                    <div class="label"><i class="fas fa-flag-checkered"></i> Completed</div>
+                    <div class="number"><?= $rented ?></div>
+                    <div class="label"><i class="fas fa-key"></i> Rented</div>
                 </div>
             </div>
         </div>
 
-        <!-- Appointments Table -->
-        <div class="table-container">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6 class="fw-bold mb-0">
-                    <i class="fas fa-list text-primary"></i> My Appointments
-                </h6>
-                <span class="text-muted small">Total: <?= count($appointments) ?></span>
-            </div>
+        <!-- ===== PROPERTY LIST ===== -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold mb-0">
+                <i class="fas fa-list text-primary"></i> Property List
+            </h5>
+            <a href="add-property.php" class="btn-primary-custom">
+                <i class="fas fa-plus"></i> Add New Property
+            </a>
+        </div>
 
-            <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Property</th>
-                            <th>Client</th>
-                            <th>Date & Time</th>
-                            <th>Message</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (empty($appointments)): ?>
+        <div class="table-container">
+            <?php if (empty($properties)): ?>
+                <div class="text-center py-5">
+                    <i class="fas fa-home fa-3x text-muted mb-3"></i>
+                    <h5 class="fw-bold">No Properties Yet</h5>
+                    <p class="text-muted">Start by adding your first property listing.</p>
+                    <a href="add-property.php" class="btn-primary-custom mt-2">
+                        <i class="fas fa-plus"></i> Add Property
+                    </a>
+                </div>
+            <?php else: ?>
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
                             <tr>
-                                <td colspan="7" class="text-center py-4 text-muted">
-                                    <i class="fas fa-calendar-times fa-2x mb-2 d-block"></i>
-                                    No appointments for your properties yet.
-                                </td>
+                                <th>Property</th>
+                                <th>Type</th>
+                                <th>Price</th>
+                                <th>City</th>
+                                <th>Status</th>
+                                <th class="text-end">Actions</th>
                             </tr>
-                        <?php else: ?>
-                            <?php foreach ($appointments as $apt): ?>
-                                <tr id="appointment-<?= $apt->id ?>">
-                                    <td><?= $apt->id ?></td>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($properties as $p): ?>
+                                <tr id="property-<?= $p->id ?>">
                                     <td>
-                                        <?php if ($apt->property_photo): ?>
-                                            <img src="/project/images/<?= $apt->property_photo ?>" class="property-thumb" alt="Property">
-                                        <?php else: ?>
-                                            <div class="property-thumb d-flex align-items-center justify-content-center">
-                                                <i class="fas fa-home text-muted"></i>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <?php if ($p->photo): ?>
+                                                <img src="images/<?= $p->photo ?>"
+                                                     style="width:45px;height:45px;object-fit:cover;border-radius:8px;">
+                                            <?php else: ?>
+                                                <div style="width:45px;height:45px;background:#f1f5f9;border-radius:8px;display:flex;align-items:center;justify-content:center;">
+                                                    <i class="fas fa-home text-muted"></i>
+                                                </div>
+                                            <?php endif; ?>
+                                            <div>
+                                                <div class="fw-semibold small"><?= htmlspecialchars($p->title) ?></div>
+                                                <div class="text-muted" style="font-size:0.75rem;">
+                                                    <?= $p->bedrooms ?> bd • <?= $p->bathrooms ?> ba • <?= $p->area_sqft ?> sqft
+                                                </div>
                                             </div>
-                                        <?php endif; ?>
-                                        <br>
-                                        <small><strong><?= htmlspecialchars($apt->property_title ?? 'N/A') ?></strong></small><br>
-                                        <small class="text-muted">
-                                            <i class="fas fa-map-marker-alt"></i> 
-                                            <?= htmlspecialchars($apt->property_city ?? '') ?>
-                                        </small>
-                                    </td>
-                                    <td>
-                                        <strong><?= htmlspecialchars($apt->user_name ?? 'N/A') ?></strong><br>
-                                        <small class="text-muted">
-                                            <i class="fas fa-envelope"></i> 
-                                            <?= htmlspecialchars($apt->user_email ?? '') ?>
-                                        </small><br>
-                                        <small class="text-muted">
-                                            <i class="fas fa-phone"></i> 
-                                            <?= htmlspecialchars($apt->user_phone ?? '') ?>
-                                        </small>
-                                    </td>
-                                    <td>
-                                        <div class="fw-bold text-primary">
-                                            <i class="fas fa-calendar"></i> 
-                                            <?= date('M j, Y', strtotime($apt->appointment_date)) ?>
                                         </div>
-                                        <small class="text-muted">
-                                            <i class="fas fa-clock"></i> 
-                                            <?= date('g:i A', strtotime($apt->appointment_date)) ?>
-                                        </small>
                                     </td>
                                     <td>
-                                        <?php if ($apt->message): ?>
-                                            <small class="text-muted" style="font-style: italic;">
-                                                "<?= htmlspecialchars(substr($apt->message, 0, 40)) ?><?= strlen($apt->message) > 40 ? '...' : '' ?>"
-                                            </small>
-                                        <?php else: ?>
-                                            <small class="text-muted">—</small>
-                                        <?php endif; ?>
+                                        <span class="badge bg-light text-dark text-uppercase" style="font-size:0.7rem;">
+                                            <?= $p->listing_type ?>
+                                        </span>
                                     </td>
+                                    <td class="fw-semibold">$<?= number_format($p->price, 0) ?></td>
+                                    <td class="small"><?= htmlspecialchars($p->city) ?></td>
                                     <td class="status-cell">
-                                        <span class="badge-status <?= $apt->status ?>">
-                                            <?= ucfirst($apt->status) ?>
+                                        <span class="badge-status <?= $p->status ?>">
+                                            <?= ucfirst($p->status) ?>
                                         </span>
                                     </td>
                                     <td>
-                                        <!-- Status Dropdown -->
-                                        <div class="dropdown d-inline">
-                                            <button class="btn btn-sm btn-outline-primary dropdown-toggle btn-action" data-bs-toggle="dropdown">
+                                        <div class="d-flex gap-1 justify-content-end flex-wrap">
+                                            <a href="property-detail.php?id=<?= $p->id ?>"
+                                               class="btn btn-sm btn-outline-secondary" title="View">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="property-edit.php?id=<?= $p->id ?>"
+                                               class="btn-warning-custom" title="Edit">
                                                 <i class="fas fa-edit"></i>
-                                            </button>
-                                            <div class="dropdown-menu dropdown-menu-dark">
-                                                <a href="#" class="dropdown-item change-status" data-id="<?= $apt->id ?>" data-status="pending">⏳ Pending</a>
-                                                <a href="#" class="dropdown-item change-status" data-id="<?= $apt->id ?>" data-status="confirmed">✅ Confirmed</a>
-                                                <a href="#" class="dropdown-item change-status" data-id="<?= $apt->id ?>" data-status="completed">🏁 Completed</a>
-                                                <a href="#" class="dropdown-item change-status" data-id="<?= $apt->id ?>" data-status="cancelled">❌ Cancelled</a>
+                                            </a>
+
+                                            <!-- ✅ STATUS DROPDOWN (Agent Appointments Style) -->
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-outline-primary dropdown-toggle btn-action"
+                                                        data-bs-toggle="dropdown"
+                                                        type="button">
+                                                    <i class="fas fa-exchange-alt"></i>
+                                                </button>
+                                                <div class="dropdown-menu dropdown-menu-dark">
+                                                    <?php
+                                                    if ($p->listing_type === 'sale') {
+                                                        $options = ['available', 'pending', 'sold'];
+                                                    } else {
+                                                        $options = ['available', 'pending', 'rented'];
+                                                    }
+                                                    foreach ($options as $opt):
+                                                        if ($opt === $p->status) continue;
+                                                    ?>
+                                                        <a href="#"
+                                                           class="dropdown-item change-property-status"
+                                                           data-id="<?= $p->id ?>"
+                                                           data-status="<?= $opt ?>">
+                                                            <?php if ($opt === 'available'): ?>🟢
+                                                            <?php elseif ($opt === 'pending'): ?>⏳
+                                                            <?php elseif ($opt === 'sold'): ?>🏁
+                                                            <?php elseif ($opt === 'rented'): ?>🔑
+                                                            <?php endif; ?>
+                                                            <?= ucfirst($opt) ?>
+                                                        </a>
+                                                    <?php endforeach; ?>
+                                                </div>
                                             </div>
                                         </div>
-
-                                        <!-- View Property -->
-                                        <a href="property-detail.php?id=<?= $apt->property_id ?>" 
-                                           class="btn btn-sm btn-info btn-action" target="_blank">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
         </div>
 
-    </div>
+        <!-- ===== APPOINTMENTS SECTION ===== -->
+        <div class="appointments-section">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0">
+                    <i class="fas fa-calendar-check text-primary"></i> My Appointments
+                </h5>
+                <span class="text-muted small"><?= count($appointments) ?> total</span>
+            </div>
 
-    <footer class="text-center text-muted py-3 mt-4">
-        <small>&copy; <?= date('Y') ?> KKG Property Agent Panel</small>
+            <!-- Appointment stats -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-3 col-6">
+                    <div class="stat-card orange">
+                        <div class="number" style="font-size:1.5rem;"><?= $appt_pending ?></div>
+                        <div class="label"><i class="fas fa-clock"></i> Pending</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="stat-card green">
+                        <div class="number" style="font-size:1.5rem;"><?= $appt_confirmed ?></div>
+                        <div class="label"><i class="fas fa-check-circle"></i> Confirmed</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="stat-card teal">
+                        <div class="number" style="font-size:1.5rem;"><?= $appt_completed ?></div>
+                        <div class="label"><i class="fas fa-flag-checkered"></i> Completed</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="stat-card red">
+                        <div class="number" style="font-size:1.5rem;"><?= $appt_cancelled ?></div>
+                        <div class="label"><i class="fas fa-times-circle"></i> Cancelled</div>
+                    </div>
+                </div>
+            </div>
+
+            <?php if (empty($appointments)): ?>
+                <div class="table-container text-center py-5">
+                    <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                    <h5 class="fw-bold">No Appointments</h5>
+                    <p class="text-muted">No appointment requests for your properties yet.</p>
+                </div>
+            <?php else: ?>
+                <?php foreach ($appointments as $a): ?>
+                    <div class="appointment-card <?= $a->status ?>" id="appointment-<?= $a->id ?>">
+                        <?php if (!empty($a->property_photo)): ?>
+                            <img src="images/<?= htmlspecialchars($a->property_photo) ?>" alt="Property">
+                        <?php else: ?>
+                            <div class="no-image"><i class="fas fa-home"></i></div>
+                        <?php endif; ?>
+
+                        <div class="info">
+                            <div class="title"><?= htmlspecialchars($a->property_title ?? 'Property') ?></div>
+                            <div class="location">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <?= htmlspecialchars($a->property_city ?? 'N/A') ?>
+                            </div>
+                            <div class="datetime">
+                                <i class="fas fa-calendar"></i>
+                                <?= date('F j, Y', strtotime($a->appointment_date)) ?>
+                                <i class="fas fa-clock ms-2"></i>
+                                <?= date('g:i A', strtotime($a->appointment_date)) ?>
+                            </div>
+                            <div class="user">
+                                <i class="fas fa-user"></i>
+                                <?= htmlspecialchars($a->user_name ?? 'N/A') ?>
+                                &nbsp;•&nbsp;
+                                <i class="fas fa-envelope"></i>
+                                <?= htmlspecialchars($a->user_email ?? 'N/A') ?>
+                            </div>
+                            <?php if (!empty($a->message)): ?>
+                                <div class="message">
+                                    <i class="fas fa-comment"></i>
+                                    <?= htmlspecialchars($a->message) ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+
+                        <div class="text-end">
+                            <div>
+                                <span class="badge-apt-status <?= $a->status ?>">
+                                    <?= ucfirst($a->status) ?>
+                                </span>
+                            </div>
+
+                            <div class="d-flex flex-column gap-1 mt-2">
+                                <?php if ($a->status === 'pending'): ?>
+                                    <button class="btn-action btn-confirm"
+                                            onclick="updateAppointmentStatus(<?= $a->id ?>, 'confirmed', this)">
+                                        <i class="fas fa-check"></i> Confirm
+                                    </button>
+                                <?php endif; ?>
+
+                                <?php if ($a->status === 'confirmed'): ?>
+                                    <button class="btn-action btn-complete"
+                                            onclick="updateAppointmentStatus(<?= $a->id ?>, 'completed', this)">
+                                        <i class="fas fa-flag-checkered"></i> Complete
+                                    </button>
+                                <?php endif; ?>
+
+                                <?php if (in_array($a->status, ['pending', 'confirmed'])): ?>
+                                    <button class="btn-action btn-cancel"
+                                            onclick="updateAppointmentStatus(<?= $a->id ?>, 'cancelled', this)">
+                                        <i class="fas fa-times"></i> Cancel
+                                    </button>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </div>
+
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <p class="mb-0">&copy; <?= date('Y') ?> Myanmar Real Estate. All rights reserved.</p>
+        </div>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // ===== TOAST =====
         function showToast(message, type = 'success') {
             const container = document.getElementById('toastContainer');
-            const icons = {
-                success: 'fa-check-circle',
-                error: 'fa-exclamation-circle',
-                info: 'fa-info-circle'
-            };
+            const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle' };
             const toast = document.createElement('div');
             toast.className = `toast-message ${type}`;
-            toast.innerHTML = `<i class="fas ${icons[type] || icons.success}"></i> ${message}`;
+            toast.innerHTML = `<i class="fas ${icons[type]}"></i> ${message}`;
             container.appendChild(toast);
-            setTimeout(() => toast.classList.add('show'), 50);
-            setTimeout(() => {
-                toast.classList.remove('show');
-                setTimeout(() => toast.remove(), 500);
-            }, 3500);
+            setTimeout(() => toast.remove(), 3500);
         }
 
-        function showConfetti() {
-            const container = document.createElement('div');
-            container.className = 'confetti-container';
-            document.body.appendChild(container);
-            const colors = ['#2563eb', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
-            for (let i = 0; i < 60; i++) {
-                const confetti = document.createElement('div');
-                confetti.className = 'confetti';
-                confetti.style.left = Math.random() * 100 + '%';
-                confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
-                confetti.style.width = (Math.random() * 8 + 4) + 'px';
-                confetti.style.height = (Math.random() * 8 + 4) + 'px';
-                confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
-                confetti.style.animationDuration = (Math.random() * 2 + 1.5) + 's';
-                confetti.style.animationDelay = (Math.random() * 0.8) + 's';
-                container.appendChild(confetti);
-            }
-            setTimeout(() => container.remove(), 3500);
-        }
-
-        function showLoading() { document.getElementById('loadingOverlay').classList.add('show'); }
-        function hideLoading() { document.getElementById('loadingOverlay').classList.remove('show'); }
-
-        // ===== CHANGE STATUS =====
-        document.querySelectorAll('.change-status').forEach(link => {
+        // ===== PROPERTY STATUS CHANGE (Dropdown Style) =====
+        document.querySelectorAll('.change-property-status').forEach(link => {
             link.addEventListener('click', function(e) {
                 e.preventDefault();
+
                 const id = this.dataset.id;
                 const status = this.dataset.status;
-                const row = document.getElementById('appointment-' + id);
+                const row = document.getElementById('property-' + id);
                 const statusCell = row.querySelector('.status-cell');
 
-                if (!confirm(`Change status to ${status}?`)) return;
+                if (!confirm(`Change status to "${status}"?`)) return;
 
-                showLoading();
                 statusCell.innerHTML = `<span class="badge-status ${status}">${status.charAt(0).toUpperCase() + status.slice(1)}</span>`;
 
-                row.classList.add('row-highlight');
-                setTimeout(() => row.classList.remove('row-highlight'), 1000);
-
-                fetch(`/project/actions/appointments-update.php?id=${id}&status=${status}`)
-                    .then(() => {
-                        hideLoading();
-                        showToast(`Status changed to ${status}!`, 'success');
-                        showConfetti();
-                    })
-                    .catch(() => {
-                        hideLoading();
-                        showToast('Error updating status', 'error');
-                    });
+                fetch(`actions/properties-update-status.php?id=${id}&status=${status}`, {
+                    method: 'POST'
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('Status changed to ' + status, 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showToast(data.message || 'Failed to update', 'error');
+                        setTimeout(() => location.reload(), 1200);
+                    }
+                })
+                .catch(() => {
+                    showToast('Network error', 'error');
+                    setTimeout(() => location.reload(), 1200);
+                });
             });
         });
+
+        // ===== APPOINTMENT STATUS UPDATE =====
+        function updateAppointmentStatus(id, newStatus, btn) {
+            if (!confirm(`Mark this appointment as ${newStatus}?`)) return;
+
+            btn.disabled = true;
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+            fetch(`actions/appointments-update.php?id=${id}&status=${newStatus}`, {
+                method: 'POST'
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Appointment marked as ' + newStatus, 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHTML;
+                    showToast(data.message || 'Failed to update', 'error');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
+                showToast('Network error', 'error');
+            });
+        }
     </script>
 </body>
 </html>

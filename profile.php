@@ -334,21 +334,16 @@ $current_page = basename($_SERVER['PHP_SELF']);
                         </div>
                     </div>
 
-                    <!-- ✅ ROLE-BASED DASHBOARD BUTTONS -->
+                    <!-- Buttons -->
                     <div class="mt-4 d-flex gap-2 flex-wrap">
                         <a href="actions/logout.php" class="btn-danger-custom">
                             <i class="fas fa-sign-out-alt"></i> Logout
                         </a>
 
                         <?php if ($user->role_id == 3): ?>
-                            <!-- ADMIN DASHBOARD -->
+                            <!-- Admin only -->
                             <a href="admin.php" class="btn-primary-custom">
                                 <i class="fas fa-chart-line"></i> Admin Dashboard
-                            </a>
-                        <?php elseif ($user->role_id == 2): ?>
-                            <!-- AGENT DASHBOARD -->
-                            <a href="agent-appointments.php" class="btn-primary-custom">
-                                <i class="fas fa-calendar-check"></i> Agent Dashboard
                             </a>
                         <?php endif; ?>
                     </div>

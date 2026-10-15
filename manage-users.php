@@ -295,6 +295,9 @@ $is_admin = ($auth->role_id == 3);
                         <a href="admin-appointments.php" class="nav-link"><i class="fas fa-calendar"></i> Appointments</a>
                     </li>
                     <li class="nav-item">
+    <a href="admin-payments.php" class="nav-link"><i class="fas fa-dollar-sign"></i> Payments</a>
+</li>
+                    <li class="nav-item">
                         <a href="messages.php" class="nav-link"><i class="fas fa-envelope"></i> Messages</a>
                     </li>
                     <li class="nav-item">

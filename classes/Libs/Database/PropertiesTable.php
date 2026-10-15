@@ -17,7 +17,6 @@ class PropertiesTable
     // GET METHODS
     // ============================================
 
-    // Get all properties with agent info
     public function all()
     {
         try {
@@ -33,7 +32,6 @@ class PropertiesTable
         }
     }
 
-    // Get all properties with agent info (for admin)
     public function getAllWithAgent()
     {
         try {
@@ -49,7 +47,6 @@ class PropertiesTable
         }
     }
 
-    // Get properties by listing type (sale or rent)
     public function getByListingType($listing_type)
     {
         try {
@@ -68,7 +65,6 @@ class PropertiesTable
         }
     }
 
-    // Get properties by status
     public function getByStatus($status)
     {
         try {
@@ -86,7 +82,6 @@ class PropertiesTable
         }
     }
 
-    // Get latest properties (newest first)
     public function getLatest($limit = 12)
     {
         try {
@@ -105,7 +100,6 @@ class PropertiesTable
         }
     }
 
-    // Get available properties
     public function getAvailable($limit = null)
     {
         try {
@@ -126,7 +120,6 @@ class PropertiesTable
         }
     }
 
-    // Get featured properties
     public function getFeatured($limit = 6)
     {
         try {
@@ -145,7 +138,6 @@ class PropertiesTable
         }
     }
 
-    // Get recent properties
     public function getRecent($limit = 5)
     {
         try {
@@ -163,7 +155,6 @@ class PropertiesTable
         }
     }
 
-    // Get property by ID
     public function getById($id)
     {
         try {
@@ -180,7 +171,6 @@ class PropertiesTable
         }
     }
 
-    // Get property with photos
     public function getWithPhotos($id)
     {
         try {
@@ -192,12 +182,12 @@ class PropertiesTable
             ");
             $stmt->execute([$id]);
             $property = $stmt->fetch();
-            
+
             if ($property) {
                 $photo_table = new PropertyPhotosTable(new MySQL());
                 $property->photos = $photo_table->getByProperty($id);
             }
-            
+
             return $property;
         } catch (PDOException $e) {
             return null;
@@ -205,10 +195,9 @@ class PropertiesTable
     }
 
     // ============================================
-    // INSERT / UPDATE / DELETE METHODS
+    // INSERT / UPDATE / DELETE
     // ============================================
 
-    // Insert new property
     public function insert(array $data)
     {
         try {
@@ -223,26 +212,26 @@ class PropertiesTable
                     :listing_type, :status, :photo, :featured, NOW()
                 )
             ");
-            
+
             $stmt->execute([
-                ':user_id' => $data['user_id'],
-                ':title' => $data['title'],
-                ':description' => $data['description'],
-                ':price' => $data['price'],
-                ':bedrooms' => $data['bedrooms'] ?? 0,
-                ':bathrooms' => $data['bathrooms'] ?? 0,
-                ':area_sqft' => $data['area_sqft'] ?? 0,
-                ':address' => $data['address'],
-                ':city' => $data['city'] ?? '',
-                ':state' => $data['state'] ?? '',
-                ':zip' => $data['zip'] ?? '',
+                ':user_id'       => $data['user_id'],
+                ':title'         => $data['title'],
+                ':description'   => $data['description'],
+                ':price'         => $data['price'],
+                ':bedrooms'      => $data['bedrooms'] ?? 0,
+                ':bathrooms'     => $data['bathrooms'] ?? 0,
+                ':area_sqft'     => $data['area_sqft'] ?? 0,
+                ':address'       => $data['address'],
+                ':city'          => $data['city'] ?? '',
+                ':state'         => $data['state'] ?? '',
+                ':zip'           => $data['zip'] ?? '',
                 ':property_type' => $data['property_type'] ?? 'house',
-                ':listing_type' => $data['listing_type'] ?? 'sale',
-                ':status' => $data['status'] ?? 'available',
-                ':photo' => $data['photo'] ?? null,
-                ':featured' => $data['featured'] ?? 0
+                ':listing_type'  => $data['listing_type'] ?? 'sale',
+                ':status'        => $data['status'] ?? 'available',
+                ':photo'         => $data['photo'] ?? null,
+                ':featured'      => $data['featured'] ?? 0
             ]);
-            
+
             return $this->db->lastInsertId();
         } catch (PDOException $e) {
             echo $e->getMessage();
@@ -250,7 +239,6 @@ class PropertiesTable
         }
     }
 
-    // Update property photo
     public function updatePhoto($id, $photo)
     {
         try {
@@ -259,33 +247,32 @@ class PropertiesTable
             ");
             return $stmt->execute([
                 ':photo' => $photo,
-                ':id' => $id
+                ':id'    => $id
             ]);
         } catch (PDOException $e) {
             return false;
         }
     }
 
-    // Update property
     public function update($id, array $data)
     {
         try {
             $stmt = $this->db->prepare("
                 UPDATE properties SET
-                    title = :title,
-                    description = :description,
-                    price = :price,
-                    bedrooms = :bedrooms,
-                    bathrooms = :bathrooms,
-                    area_sqft = :area_sqft,
-                    address = :address,
-                    city = :city,
-                    state = :state,
-                    zip = :zip,
+                    title         = :title,
+                    description   = :description,
+                    price         = :price,
+                    bedrooms      = :bedrooms,
+                    bathrooms     = :bathrooms,
+                    area_sqft     = :area_sqft,
+                    address       = :address,
+                    city          = :city,
+                    state         = :state,
+                    zip           = :zip,
                     property_type = :property_type,
-                    listing_type = :listing_type,
-                    status = :status,
-                    updated_at = NOW()
+                    listing_type  = :listing_type,
+                    status        = :status,
+                    updated_at    = NOW()
                 WHERE id = :id
             ");
             $data['id'] = $id;
@@ -295,39 +282,46 @@ class PropertiesTable
         }
     }
 
-    // ✅ Update property status (FIXED)
     public function updateStatus($id, $status)
     {
         try {
-            // Validate status
             if (!in_array($status, ['available', 'pending', 'sold', 'rented'])) {
                 return false;
             }
 
+            // Prevent sale→rented / rent→sold
+            $stmt = $this->db->prepare("SELECT listing_type FROM properties WHERE id = :id");
+            $stmt->execute([':id' => $id]);
+            $listing_type = $stmt->fetchColumn();
+
+            if ($listing_type === 'sale' && $status === 'rented') return false;
+            if ($listing_type === 'rent' && $status === 'sold')   return false;
+
+            // Set sold_at / rented_at only when relevant
+            $sold_at   = ($status === 'sold')   ? 'NOW()' : 'NULL';
+            $rented_at = ($status === 'rented') ? 'NOW()' : 'NULL';
+
             $stmt = $this->db->prepare("
                 UPDATE properties 
-                SET status = :status, updated_at = NOW()
+                SET status     = :status,
+                    sold_at    = {$sold_at},
+                    rented_at  = {$rented_at},
+                    updated_at = NOW()
                 WHERE id = :id
             ");
-            
+
             $result = $stmt->execute([
-                ":id" => $id,
+                ":id"     => $id,
                 ":status" => $status
             ]);
 
-            // Check if row was updated
-            if ($result && $stmt->rowCount() > 0) {
-                return true;
-            }
-            
-            return false;
+            return $result && $stmt->rowCount() > 0;
         } catch (PDOException $e) {
             error_log("updateStatus error: " . $e->getMessage());
             return false;
         }
     }
 
-    // ✅ Toggle featured (FIXED)
     public function toggleFeatured($id)
     {
         try {
@@ -336,21 +330,15 @@ class PropertiesTable
                 SET featured = IF(featured = 1, 0, 1), updated_at = NOW()
                 WHERE id = :id
             ");
-            
+
             $result = $stmt->execute([":id" => $id]);
-            
-            if ($result && $stmt->rowCount() > 0) {
-                return true;
-            }
-            
-            return false;
+            return $result && $stmt->rowCount() > 0;
         } catch (PDOException $e) {
             error_log("toggleFeatured error: " . $e->getMessage());
             return false;
         }
     }
 
-    // Delete property
     public function delete($id)
     {
         try {
@@ -362,10 +350,9 @@ class PropertiesTable
     }
 
     // ============================================
-    // SEARCH METHODS
+    // SEARCH
     // ============================================
 
-    // Search properties with filters
     public function search($keyword = '', $type = '', $city = '', $listing_type = '', $bedrooms = '', $price_min = '', $price_max = '')
     {
         try {
@@ -381,32 +368,26 @@ class PropertiesTable
                 $sql .= " AND (p.title LIKE :keyword OR p.description LIKE :keyword OR p.city LIKE :keyword)";
                 $params['keyword'] = "%$keyword%";
             }
-
             if (!empty($type)) {
                 $sql .= " AND p.property_type = :type";
                 $params['type'] = $type;
             }
-
             if (!empty($city)) {
                 $sql .= " AND p.city = :city";
                 $params['city'] = $city;
             }
-
             if (!empty($listing_type)) {
                 $sql .= " AND p.listing_type = :listing_type";
                 $params['listing_type'] = $listing_type;
             }
-
             if (!empty($bedrooms)) {
                 $sql .= " AND p.bedrooms >= :bedrooms";
                 $params['bedrooms'] = $bedrooms;
             }
-
             if (!empty($price_min)) {
                 $sql .= " AND p.price >= :price_min";
                 $params['price_min'] = $price_min;
             }
-
             if (!empty($price_max)) {
                 $sql .= " AND p.price <= :price_max";
                 $params['price_max'] = $price_max;
@@ -423,10 +404,9 @@ class PropertiesTable
     }
 
     // ============================================
-    // STATS METHODS
+    // STATS
     // ============================================
 
-    // Get property type breakdown
     public function getTypeBreakdown()
     {
         try {
@@ -441,7 +421,6 @@ class PropertiesTable
         }
     }
 
-    // Get statistics
     public function getStats()
     {
         try {
@@ -449,50 +428,36 @@ class PropertiesTable
                 SELECT 
                     COUNT(*) as total,
                     SUM(CASE WHEN status = 'available' THEN 1 ELSE 0 END) as available,
-                    SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
-                    SUM(CASE WHEN status = 'sold' THEN 1 ELSE 0 END) as sold,
-                    SUM(CASE WHEN status = 'rented' THEN 1 ELSE 0 END) as rented,
+                    SUM(CASE WHEN status = 'pending'   THEN 1 ELSE 0 END) as pending,
+                    SUM(CASE WHEN status = 'sold'      THEN 1 ELSE 0 END) as sold,
+                    SUM(CASE WHEN status = 'rented'    THEN 1 ELSE 0 END) as rented,
                     SUM(CASE WHEN listing_type = 'sale' THEN 1 ELSE 0 END) as for_sale,
                     SUM(CASE WHEN listing_type = 'rent' THEN 1 ELSE 0 END) as for_rent
                 FROM properties
             ");
             $result = $stmt->fetch();
-            
+
             if (!$result || $result->total == 0) {
                 return (object) [
-                    'total' => 0,
-                    'available' => 0,
-                    'pending' => 0,
-                    'sold' => 0,
-                    'rented' => 0,
-                    'for_sale' => 0,
-                    'for_rent' => 0
+                    'total' => 0, 'available' => 0, 'pending' => 0,
+                    'sold' => 0, 'rented' => 0, 'for_sale' => 0, 'for_rent' => 0
                 ];
             }
-            
-            $result->available = (int)($result->available ?? 0);
-            $result->pending = (int)($result->pending ?? 0);
-            $result->sold = (int)($result->sold ?? 0);
-            $result->rented = (int)($result->rented ?? 0);
-            $result->for_sale = (int)($result->for_sale ?? 0);
-            $result->for_rent = (int)($result->for_rent ?? 0);
+
+            foreach (['available','pending','sold','rented','for_sale','for_rent'] as $k) {
+                $result->$k = (int)($result->$k ?? 0);
+            }
             $result->total = (int)$result->total;
-            
+
             return $result;
         } catch (PDOException $e) {
             return (object) [
-                'total' => 0,
-                'available' => 0,
-                'pending' => 0,
-                'sold' => 0,
-                'rented' => 0,
-                'for_sale' => 0,
-                'for_rent' => 0
+                'total' => 0, 'available' => 0, 'pending' => 0,
+                'sold' => 0, 'rented' => 0, 'for_sale' => 0, 'for_rent' => 0
             ];
         }
     }
 
-    // Get total views
     public function getTotalViews()
     {
         try {
@@ -504,7 +469,6 @@ class PropertiesTable
         }
     }
 
-    // Get monthly listings
     public function getMonthlyListings()
     {
         try {
@@ -519,6 +483,181 @@ class PropertiesTable
             ");
             return $stmt->fetchAll();
         } catch (PDOException $e) {
+            return [];
+        }
+    }
+
+    // ============================================
+    // MONTHLY SOLD / RENTED (chart data)
+    // ============================================
+
+    public function getMonthlySoldRented($months = 12)
+    {
+        try {
+            $months = max(1, intval($months));
+
+            $stmt = $this->db->prepare("
+                SELECT
+                    DATE_FORMAT(updated_at, '%Y-%m') AS month,
+                    SUM(CASE WHEN status = 'sold'   THEN 1 ELSE 0 END) AS sold_count,
+                    SUM(CASE WHEN status = 'rented' THEN 1 ELSE 0 END) AS rented_count
+                FROM properties
+                WHERE status IN ('sold', 'rented')
+                  AND updated_at >= DATE_SUB(CURDATE(), INTERVAL :months MONTH)
+                GROUP BY DATE_FORMAT(updated_at, '%Y-%m')
+                ORDER BY month ASC
+            ");
+            $stmt->bindValue(':months', $months, PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll();
+        } catch (PDOException $e) {
+            error_log("getMonthlySoldRented error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function getMonthlySoldRentedByUser($user_id, $months = 12)
+    {
+        try {
+            $months = max(1, intval($months));
+
+            $stmt = $this->db->prepare("
+                SELECT
+                    DATE_FORMAT(updated_at, '%Y-%m') AS month,
+                    SUM(CASE WHEN status = 'sold'   THEN 1 ELSE 0 END) AS sold_count,
+                    SUM(CASE WHEN status = 'rented' THEN 1 ELSE 0 END) AS rented_count
+                FROM properties
+                WHERE user_id = :uid
+                  AND status IN ('sold', 'rented')
+                  AND updated_at >= DATE_SUB(CURDATE(), INTERVAL :months MONTH)
+                GROUP BY DATE_FORMAT(updated_at, '%Y-%m')
+                ORDER BY month ASC
+            ");
+            $stmt->bindValue(':uid',    $user_id, PDO::PARAM_INT);
+            $stmt->bindValue(':months', $months,  PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll();
+        } catch (PDOException $e) {
+            error_log("getMonthlySoldRentedByUser error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    // ============================================
+    // REVENUE (dollar amounts)
+    // ============================================
+
+    public function getRevenueStats()
+    {
+        try {
+            $stmt = $this->db->query("
+                SELECT
+                    COALESCE(SUM(CASE WHEN status = 'sold'   THEN price ELSE 0 END), 0) AS total_sales,
+                    COALESCE(SUM(CASE WHEN status = 'rented' THEN price ELSE 0 END), 0) AS total_rentals,
+                    COALESCE(SUM(CASE WHEN status IN ('sold','rented') THEN price ELSE 0 END), 0) AS total_revenue,
+
+                    COALESCE(SUM(CASE WHEN status = 'sold'
+                                      AND YEAR(updated_at) = YEAR(CURDATE())
+                                 THEN price ELSE 0 END), 0) AS year_sales,
+                    COALESCE(SUM(CASE WHEN status = 'rented'
+                                      AND YEAR(updated_at) = YEAR(CURDATE())
+                                 THEN price ELSE 0 END), 0) AS year_rentals,
+
+                    COALESCE(SUM(CASE WHEN status IN ('sold','rented')
+                                      AND YEAR(updated_at)  = YEAR(CURDATE())
+                                      AND MONTH(updated_at) = MONTH(CURDATE())
+                                 THEN price ELSE 0 END), 0) AS month_revenue
+                FROM properties
+            ");
+            return $stmt->fetch();
+        } catch (PDOException $e) {
+            error_log("getRevenueStats error: " . $e->getMessage());
+            return (object)[
+                'total_sales' => 0, 'total_rentals' => 0, 'total_revenue' => 0,
+                'year_sales' => 0, 'year_rentals' => 0, 'month_revenue' => 0
+            ];
+        }
+    }
+
+    public function getRevenueStatsByUser($user_id)
+    {
+        try {
+            $stmt = $this->db->prepare("
+                SELECT
+                    COALESCE(SUM(CASE WHEN status = 'sold'   THEN price ELSE 0 END), 0) AS total_sales,
+                    COALESCE(SUM(CASE WHEN status = 'rented' THEN price ELSE 0 END), 0) AS total_rentals,
+                    COALESCE(SUM(CASE WHEN status IN ('sold','rented') THEN price ELSE 0 END), 0) AS total_revenue,
+
+                    COALESCE(SUM(CASE WHEN status IN ('sold','rented')
+                                      AND YEAR(updated_at) = YEAR(CURDATE())
+                                 THEN price ELSE 0 END), 0) AS year_revenue,
+
+                    COALESCE(SUM(CASE WHEN status IN ('sold','rented')
+                                      AND YEAR(updated_at)  = YEAR(CURDATE())
+                                      AND MONTH(updated_at) = MONTH(CURDATE())
+                                 THEN price ELSE 0 END), 0) AS month_revenue
+                FROM properties
+                WHERE user_id = :uid
+            ");
+            $stmt->execute([':uid' => $user_id]);
+            return $stmt->fetch();
+        } catch (PDOException $e) {
+            error_log("getRevenueStatsByUser error: " . $e->getMessage());
+            return (object)[
+                'total_sales' => 0, 'total_rentals' => 0, 'total_revenue' => 0,
+                'year_revenue' => 0, 'month_revenue' => 0
+            ];
+        }
+    }
+
+    public function getMonthlyRevenue($months = 12)
+    {
+        try {
+            $months = max(1, intval($months));
+            $stmt = $this->db->prepare("
+                SELECT
+                    DATE_FORMAT(updated_at, '%Y-%m') AS month,
+                    COALESCE(SUM(CASE WHEN status = 'sold'   THEN price ELSE 0 END), 0) AS sales_revenue,
+                    COALESCE(SUM(CASE WHEN status = 'rented' THEN price ELSE 0 END), 0) AS rental_revenue,
+                    COALESCE(SUM(price), 0) AS total_revenue
+                FROM properties
+                WHERE status IN ('sold','rented')
+                  AND updated_at >= DATE_SUB(CURDATE(), INTERVAL :months MONTH)
+                GROUP BY DATE_FORMAT(updated_at, '%Y-%m')
+                ORDER BY month ASC
+            ");
+            $stmt->bindValue(':months', $months, PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll();
+        } catch (PDOException $e) {
+            error_log("getMonthlyRevenue error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function getMonthlyRevenueByUser($user_id, $months = 12)
+    {
+        try {
+            $months = max(1, intval($months));
+            $stmt = $this->db->prepare("
+                SELECT
+                    DATE_FORMAT(updated_at, '%Y-%m') AS month,
+                    COALESCE(SUM(CASE WHEN status = 'sold'   THEN price ELSE 0 END), 0) AS sales_revenue,
+                    COALESCE(SUM(CASE WHEN status = 'rented' THEN price ELSE 0 END), 0) AS rental_revenue,
+                    COALESCE(SUM(price), 0) AS total_revenue
+                FROM properties
+                WHERE user_id = :uid
+                  AND status IN ('sold','rented')
+                  AND updated_at >= DATE_SUB(CURDATE(), INTERVAL :months MONTH)
+                GROUP BY DATE_FORMAT(updated_at, '%Y-%m')
+                ORDER BY month ASC
+            ");
+            $stmt->bindValue(':uid',    $user_id, PDO::PARAM_INT);
+            $stmt->bindValue(':months', $months,  PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll();
+        } catch (PDOException $e) {
+            error_log("getMonthlyRevenueByUser error: " . $e->getMessage());
             return [];
         }
     }

@@ -67,7 +67,7 @@
         <div class="register-container">
             <div class="text-center mb-4">
                 <a href="index.php" class="brand text-decoration-none text-dark">
-                    <h2 class="fw-bold"><i class="fas fa-home"></i>KKG Property</h2>
+                    <h2 class="fw-bold"><i class="fas fa-home"></i> KKG Property</h2>
                 </a>
                 <h3 class="fw-bold mt-3">Create Account</h3>
                 <p class="text-muted">Join us to find your dream home</p>
@@ -75,9 +75,18 @@
 
             <?php if(isset($_GET['error'])): ?>
                 <div class="alert-custom error mb-3">
+                    <i class='fas fa-exclamation-circle'></i>
                     <?php 
-                        if($_GET['error'] == 'email_exists') echo "<i class='fas fa-exclamation-circle'></i> Email already registered!";
-                        if($_GET['error'] == 'missing_fields') echo "<i class='fas fa-exclamation-circle'></i> Please fill all fields!";
+                        $errors = [
+                            'email_exists'    => 'Email already registered!',
+                            'missing_fields'  => 'Please fill all fields!',
+                            'invalid_name'    => 'Name can only contain letters and spaces.',
+                            'invalid_email'   => 'Please enter a valid email address.',
+                            'invalid_phone'   => 'Phone number can only contain numbers.',
+                            'invalid_address' => 'Address contains invalid characters.',
+                            'weak_password'   => 'Password must be at least 6 characters.',
+                        ];
+                        echo $errors[$_GET['error']] ?? 'Something went wrong.';
                     ?>
                 </div>
             <?php endif; ?>
@@ -90,7 +99,10 @@
             <form action="actions/create.php" method="post">
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Full Name</label>
-                    <input type="text" class="form-control" placeholder="John Doe" name="name" required>
+                    <input type="text" class="form-control" placeholder="John Doe" name="name"
+                           pattern="[A-Za-z\s]+"
+                           title="Name can only contain letters and spaces"
+                           required>
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Email Address</label>
@@ -98,15 +110,23 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Phone Number</label>
-                    <input type="text" class="form-control" placeholder="+1 234 567 890" name="phone" required>
+                    <input type="text" class="form-control" placeholder="+1 234 567 890" name="phone"
+                           pattern="[0-9+\s-]+"
+                           title="Phone number can only contain numbers, spaces, + and -"
+                           required>
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Address</label>
-                    <textarea class="form-control" placeholder="123 Main St, City" name="address" rows="2" required></textarea>
+                    <textarea class="form-control" placeholder="123 Main St, City" name="address" rows="2"
+                              pattern="[A-Za-z0-9\s,.\-/]+"
+                              title="Address can only contain letters, numbers, and , . - /"
+                              required></textarea>
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Password</label>
-                    <input type="password" class="form-control" placeholder="••••••••" name="password" required>
+                    <input type="password" class="form-control" placeholder="••••••••" name="password"
+                           minlength="6"
+                           required>
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Register as</label>
@@ -114,7 +134,6 @@
                         <option value="1"> Regular User </option>
                         <option value="2"> Agent </option>
                     </select>
-                    <small class="text-muted">Agents can list properties for sale or rent</small>
                 </div>
                 <button type="submit" class="btn btn-primary w-100"><i class="fas fa-user-plus"></i> Create Account</button>
             </form>

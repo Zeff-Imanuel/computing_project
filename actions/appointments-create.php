@@ -1,71 +1,77 @@
 <?php
+error_reporting(0);
+ini_set('display_errors', 0);
+
 session_start();
-include("../vendor/autoload.php");
+header('Content-Type: application/json');
+
+require_once __DIR__ . '/../vendor/autoload.php';
 
 use Helpers\Auth;
 use Libs\Database\MySQL;
 use Libs\Database\AppointmentsTable;
 
-header('Content-Type: application/json');
+function out($arr) {
+    while (ob_get_level()) ob_end_clean();
+    echo json_encode($arr);
+    exit;
+}
 
+// 1. Auth
 try {
     $auth = Auth::check();
-} catch (Exception $e) {
-    echo json_encode(['success' => false, 'message' => 'Please login first']);
-    exit();
+} catch (Throwable $e) {
+    out(['success' => false, 'message' => 'Please login first']);
 }
 
-// Get JSON data
-$data = json_decode(file_get_contents('php://input'), true);
+// 2. Read input
+$raw = file_get_contents('php://input');
+$data = json_decode($raw, true);
 
-$property_id = $data['property_id'] ?? 0;
-$agent_id = $data['agent_id'] ?? 0;
-$appointment_date = $data['appointment_date'] ?? '';
-$message = $data['message'] ?? '';
+if (!is_array($data)) {
+    // Try form data as fallback
+    $data = $_POST;
+}
 
-// Validate
+$property_id      = (int)($data['property_id'] ?? 0);
+$agent_id         = (int)($data['agent_id'] ?? 0);
+$appointment_date = trim((string)($data['appointment_date'] ?? ''));
+$message          = trim((string)($data['message'] ?? ''));
+
+// 3. Validate
 if (!$property_id || !$agent_id || !$appointment_date) {
-    echo json_encode(['success' => false, 'message' => 'Missing required fields']);
-    exit();
+    out(['success' => false, 'message' => 'Missing required fields']);
 }
 
-// Check date is in the future
+if (strtotime($appointment_date) === false) {
+    out(['success' => false, 'message' => 'Invalid date format']);
+}
+
 if (strtotime($appointment_date) < time()) {
-    echo json_encode(['success' => false, 'message' => 'Appointment date must be in the future']);
-    exit();
+    out(['success' => false, 'message' => 'Date must be in the future']);
 }
 
-// Prevent user from booking their own property
-if ($auth->id == $agent_id) {
-    echo json_encode(['success' => false, 'message' => 'You cannot book your own property']);
-    exit();
+if ((int)$auth->id === $agent_id) {
+    out(['success' => false, 'message' => 'You cannot book your own property']);
 }
 
+// 4. Insert
 try {
-    $table = new AppointmentsTable(new MySQL);
+    $table = new AppointmentsTable(new MySQL());
     $result = $table->insert([
-        'property_id' => $property_id,
-        'user_id' => $auth->id,
-        'agent_id' => $agent_id,
+        'property_id'      => $property_id,
+        'user_id'          => $auth->id,
+        'agent_id'         => $agent_id,
         'appointment_date' => $appointment_date,
-        'message' => $message
+        'message'          => $message,
+        'status'           => 'pending'
     ]);
 
     if ($result) {
-        echo json_encode([
-            'success' => true,
-            'message' => 'Appointment booked successfully!'
-        ]);
+        out(['success' => true, 'message' => 'Appointment booked successfully!']);
     } else {
-        echo json_encode([
-            'success' => false,
-            'message' => 'Failed to book appointment'
-        ]);
+        out(['success' => false, 'message' => 'Insert failed']);
     }
-} catch (Exception $e) {
-    echo json_encode([
-        'success' => false,
-        'message' => 'Error: ' . $e->getMessage()
-    ]);
+} catch (Throwable $e) {
+    out(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
 }
-?>

@@ -26,9 +26,9 @@ if ($user) {
     if ($user->role_id == 3) {
         HTTP::redirect("/admin.php");
     } elseif ($user->role_id == 2) {
-        HTTP::redirect("/profile.php");
+        HTTP::redirect("/home.php");
     } else {
-        HTTP::redirect("/profile.php");
+        HTTP::redirect("/home.php");
     }
 } else {
     HTTP::redirect("/index.php", "incorrect=login");
