@@ -510,7 +510,7 @@ $user = $_SESSION['user'] ?? null;
         <div class="container">
             <div class="row">
                 <div class="col-lg-4">
-                    <a href="home.php" class="brand">Myanmar Real Estate</a>
+                    <a href="home.php" class="brand">KKG Real Estate</a>
                     <p class="mt-2" style="color: rgba(255,255,255,0.6);">
                         Buy, Sell And Rent Properties Online. Myanmar's trusted real estate platform.
                     </p>
@@ -523,14 +523,14 @@ $user = $_SESSION['user'] ?? null;
                 </div>
                 <div class="col-lg-2 col-6">
                     <h5 class="text-white fw-bold">Resources</h5>
-                    <a href="#">Property Guide</a>
+                    <a href="#">Website Guide</a>
                     <a href="#">News</a>
                     <a href="contact.php">Contact</a>
                 </div>
                 <div class="col-lg-2 col-6">
                     <h5 class="text-white fw-bold">Support</h5>
                     <a href="#"><i class="fas fa-phone-alt"></i> +95 9 123 456 789</a>
-                    <a href="#"><i class="fas fa-envelope"></i> info@myanmarrealestate.com</a>
+                    <a href="#"><i class="fas fa-envelope"></i> info@KKGrealestate.com</a>
                 </div>
                 <div class="col-lg-2 col-6">
                     <h5 class="text-white fw-bold">Follow Us</h5>
@@ -540,7 +540,7 @@ $user = $_SESSION['user'] ?? null;
                 </div>
             </div>
             <div class="bottom text-center">
-                <p>&copy; <?= date('Y') ?> Myanmar Real Estate. All rights reserved. | Buy, Sell And Rent Properties Online</p>
+                <p>&copy; <?= date('Y') ?> Ko Kyaw Gyi Real Estate. All rights reserved. | Buy, Sell And Rent Properties Online</p>
             </div>
         </div>
     </footer>

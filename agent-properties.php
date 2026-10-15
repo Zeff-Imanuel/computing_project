@@ -73,6 +73,7 @@ $user = $auth;
             --accent: #f59e0b;
             --gray: #64748b;
             --light-gray: #f1f5f9;
+            --border-color: #e2e8f0;
             --shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
             --shadow-lg: 0 10px 25px -3px rgba(0,0,0,0.15);
             --radius: 12px;
@@ -159,7 +160,7 @@ $user = $auth;
         .badge-status.sold      { background: #fee2e2; color: #991b1b; }
         .badge-status.rented    { background: #cffafe; color: #155e75; }
 
-        /* ===== STATUS SELECT (screenshot style) ===== */
+        /* ===== STATUS SELECT ===== */
         .status-select {
             font-size: 0.82rem;
             font-weight: 600;
@@ -335,14 +336,64 @@ $user = $auth;
         .toast-message.success { background: #22c55e; }
         .toast-message.error   { background: #ef4444; }
 
+        /* ===== FOOTER ===== */
         .footer {
-            background: #0f172a;
+            background: var(--secondary);
             color: rgba(255,255,255,0.7);
-            padding: 30px 0 20px;
-            margin-top: 40px;
-            text-align: center;
-            font-size: 0.9rem;
+            padding: 50px 0 20px;
+            margin-top: 50px;
         }
+        .footer .footer-brand {
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: white;
+            text-decoration: none;
+        }
+        .footer .footer-brand span { color: var(--accent); }
+        .footer h5 {
+            color: white;
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+        .footer a {
+            color: rgba(255,255,255,0.6);
+            text-decoration: none;
+            display: block;
+            padding: 4px 0;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        .footer a:hover {
+            color: white;
+            padding-left: 4px;
+        }
+        .footer a i { margin-right: 6px; }
+        .footer .footer-bottom {
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 20px;
+            margin-top: 30px;
+            text-align: center;
+            font-size: 0.85rem;
+        }
+        .footer .social-icons a {
+            display: inline-block;
+            width: 36px;
+            height: 36px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 50%;
+            text-align: center;
+            line-height: 36px;
+            margin-right: 8px;
+            padding: 0;
+            transition: all 0.3s;
+        }
+        .footer .social-icons a:hover {
+            background: var(--primary);
+            padding-left: 0;
+            transform: translateY(-2px);
+        }
+        .footer .social-icons a i { margin: 0; }
 
         @media (max-width: 768px) {
             .page-header h1 { font-size: 1.8rem; }
@@ -462,7 +513,6 @@ $user = $auth;
                                         </span>
                                     </td>
 
-                                    <!-- ✅ CHANGE STATUS COLUMN -->
                                     <td class="text-center">
                                         <select class="status-select"
                                                 data-id="<?= $p->id ?>"
@@ -482,7 +532,6 @@ $user = $auth;
                                         </select>
                                     </td>
 
-                                    <!-- ✅ ACTIONS COLUMN -->
                                     <td class="text-center">
                                         <div class="action-btns">
                                             <a href="property-detail.php?id=<?= $p->id ?>"
@@ -623,9 +672,73 @@ $user = $auth;
 
     </section>
 
+    <!-- ===== FOOTER ===== -->
     <footer class="footer">
         <div class="container">
-            <p class="mb-0">&copy; <?= date('Y') ?> Myanmar Real Estate. All rights reserved.</p>
+            <div class="row g-4">
+
+                <!-- Brand -->
+                <div class="col-lg-4 col-md-6">
+                    <a href="home.php" class="footer-brand">
+                        <i class="fas fa-home"></i> KKG <span>Property</span>
+                    </a>
+                    <p class="mt-3" style="font-size: 0.9rem;">
+                        Buy, sell, and rent properties online. Agent management panel for Ko Kyaw Gi Properties.
+                    </p>
+                    <div class="social-icons mt-3">
+                        <a href="#"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                        <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                    </div>
+                </div>
+
+                <!-- Quick Links -->
+                <div class="col-lg-2 col-md-6">
+                    <h5>Quick Links</h5>
+                    <a href="home.php"><i class="fas fa-angle-right"></i> Home</a>
+                    <a href="sale.php"><i class="fas fa-angle-right"></i> For Sale</a>
+                    <a href="rent.php"><i class="fas fa-angle-right"></i> For Rent</a>
+                    <a href="agent-properties.php"><i class="fas fa-angle-right"></i> My Properties</a>
+                    <a href="agent-appointments.php"><i class="fas fa-angle-right"></i> My Appointments</a>
+                </div>
+
+                <!-- Agent Guide -->
+                <div class="col-lg-3 col-md-6">
+                    <h5>Agent Guide</h5>
+                    <a href="add-property.php"><i class="fas fa-angle-right"></i>Agent Guide</a>
+                    <a href="add-property.php"><i class="fas fa-angle-right"></i> How to Add a Property</a>
+                    <a href="add-property.php"><i class="fas fa-angle-right"></i> Upload Property Photos</a>
+                    <a href="agent-properties.php"><i class="fas fa-angle-right"></i> Change Property Status</a>
+                    <a href="agent-appointments.php"><i class="fas fa-angle-right"></i> Manage Appointments</a>
+                    <a href="agent-properties.php"><i class="fas fa-angle-right"></i> View Your Listings</a>
+                </div>
+
+                <!-- Contact -->
+                <div class="col-lg-3 col-md-6">
+                    <h5>Contact Us</h5>
+                    <a href="mailto:info@kkgproperty.com">
+                        <i class="fas fa-envelope"></i> info@kkgproperty.com
+                    </a>
+                    <a href="tel:+959123456789">
+                        <i class="fas fa-phone"></i> +95 9 123 456 789
+                    </a>
+                    <a href="contact.php">
+                        <i class="fas fa-map-marker-alt"></i> Yangon, Myanmar
+                    </a>
+                    <a href="contact.php">
+                        <i class="fas fa-comment"></i> Send a Message
+                    </a>
+                </div>
+
+            </div>
+
+            <div class="footer-bottom">
+                <p class="mb-0">
+                    &copy; <?= date('Y') ?> <strong style="color:white;">KKG Property</strong> Agent Panel.
+                    All rights reserved.
+                </p>
+            </div>
         </div>
     </footer>
 

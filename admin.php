@@ -218,6 +218,65 @@ $is_admin = true;
             background: #16a34a;
             color: white;
         }
+
+        /* ===== FOOTER ===== */
+        .footer {
+            background: var(--secondary);
+            color: rgba(255,255,255,0.7);
+            padding: 50px 0 20px;
+            margin-top: 50px;
+        }
+        .footer .footer-brand {
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: white;
+            text-decoration: none;
+        }
+        .footer .footer-brand span { color: var(--accent); }
+        .footer h5 {
+            color: white;
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+        .footer a {
+            color: rgba(255,255,255,0.6);
+            text-decoration: none;
+            display: block;
+            padding: 4px 0;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        .footer a:hover {
+            color: white;
+            padding-left: 4px;
+        }
+        .footer a i { margin-right: 6px; }
+        .footer .footer-bottom {
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 20px;
+            margin-top: 30px;
+            text-align: center;
+            font-size: 0.85rem;
+        }
+        .footer .social-icons a {
+            display: inline-block;
+            width: 36px;
+            height: 36px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 50%;
+            text-align: center;
+            line-height: 36px;
+            margin-right: 8px;
+            padding: 0;
+            transition: all 0.3s;
+        }
+        .footer .social-icons a:hover {
+            background: var(--primary);
+            padding-left: 0;
+            transform: translateY(-2px);
+        }
+        .footer .social-icons a i { margin: 0; }
     </style>
 </head>
 <body>
@@ -436,8 +495,74 @@ $is_admin = true;
 
     </div>
 
-    <footer class="text-center text-muted py-3 mt-4">
-        <small>&copy; <?= date('Y') ?> KKG Property Admin Panel</small>
+    <!-- ===== FOOTER ===== -->
+    <footer class="footer">
+        <div class="container">
+            <div class="row g-4">
+
+                <!-- Brand -->
+                <div class="col-lg-4 col-md-6">
+                    <a href="admin.php" class="footer-brand">
+                        <i class="fas fa-home"></i> KKG <span>Property</span>
+                    </a>
+                    <p class="mt-3" style="font-size: 0.9rem;">
+                        Buy, sell, and rent properties online. Admin management panel for Ko Kyaw Gi Properties.
+                    </p>
+                    <div class="social-icons mt-3">
+                        <a href="#"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                        <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                    </div>
+                </div>
+
+                <!-- Quick Links -->
+                <div class="col-lg-2 col-md-6">
+                    <h5>Quick Links</h5>
+                    <a href="admin.php"><i class="fas fa-angle-right"></i> Dashboard</a>
+                    <a href="manage-users.php"><i class="fas fa-angle-right"></i> Users</a>
+                    <a href="admin-properties.php"><i class="fas fa-angle-right"></i> Properties</a>
+                    <a href="admin-appointments.php"><i class="fas fa-angle-right"></i> Appointments</a>
+                    <a href="admin-payments.php"><i class="fas fa-angle-right"></i> Payments</a>
+                </div>
+
+                <!-- Admin Guide -->
+                <div class="col-lg-3 col-md-6">
+                    <h5>Admin Guide</h5>
+                    <a href="admin-properties.php"><i class="fas fa-angle-right"></i> Admin Guid PDF</a>
+                    <a href="admin-properties.php"><i class="fas fa-angle-right"></i> Manage Properties</a>
+                    <a href="manage-users.php"><i class="fas fa-angle-right"></i> Manage Users</a>
+                    <a href="admin-appointments.php"><i class="fas fa-angle-right"></i> Manage Appointments</a>
+                    <a href="admin-payments.php"><i class="fas fa-angle-right"></i> Record Payments</a>
+                    <a href="export.php?type=users"><i class="fas fa-angle-right"></i> Generate Reports</a>
+                </div>
+
+                <!-- Contact -->
+                <div class="col-lg-3 col-md-6">
+                    <h5>Contact Us</h5>
+                    <a href="mailto:info@kkgproperty.com">
+                        <i class="fas fa-envelope"></i> info@kkgproperty.com
+                    </a>
+                    <a href="tel:+959123456789">
+                        <i class="fas fa-phone"></i> +95 9 123 456 789
+                    </a>
+                    <a href="contact.php">
+                        <i class="fas fa-map-marker-alt"></i> Yangon, Myanmar
+                    </a>
+                    <a href="contact.php">
+                        <i class="fas fa-comment"></i> Send a Message
+                    </a>
+                </div>
+
+            </div>
+
+            <div class="footer-bottom">
+                <p class="mb-0">
+                    &copy; <?= date('Y') ?> <strong style="color:white;">KKG Property</strong> Admin Panel.
+                    All rights reserved.
+                </p>
+            </div>
+        </div>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>

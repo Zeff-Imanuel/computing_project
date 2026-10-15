@@ -336,12 +336,17 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
                     <!-- Buttons -->
                     <div class="mt-4 d-flex gap-2 flex-wrap">
+
+                        <!-- ✅ EDIT BUTTON (First, Blue, Non-functional) -->
+                        <button type="button" class="btn-primary-custom" disabled style="opacity:0.6; cursor:not-allowed;">
+                            <i class="fas fa-edit"></i> Edit Profile
+                        </button>
+
                         <a href="actions/logout.php" class="btn-danger-custom">
                             <i class="fas fa-sign-out-alt"></i> Logout
                         </a>
 
                         <?php if ($user->role_id == 3): ?>
-                            <!-- Admin only -->
                             <a href="admin.php" class="btn-primary-custom">
                                 <i class="fas fa-chart-line"></i> Admin Dashboard
                             </a>
